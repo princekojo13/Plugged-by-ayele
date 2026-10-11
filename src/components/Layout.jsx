@@ -4,7 +4,6 @@ import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./footer";
 import WhatsAppFloat from "./WhatsAppFloat";
-import StoreAssistantFloat from "./Storeassistantfloat";
 
 export default function Layout() {
   return (
@@ -19,9 +18,6 @@ export default function Layout() {
 
       {/* Existing WhatsApp button */}
       <WhatsAppFloat />
-
-      {/* AI shopping assistant */}
-      <StoreAssistantFloat />
     </div>
   );
 }
