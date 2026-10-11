@@ -1,0 +1,27 @@
+
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Navbar from "./Navbar";
+import Footer from "./footer";
+import WhatsAppFloat from "./WhatsAppFloat";
+import StoreAssistantFloat from "./Storeassistantfloat";
+
+export default function Layout() {
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      <Navbar />
+
+      <main className="flex-1">
+        <Outlet />
+      </main>
+
+      <Footer />
+
+      {/* Existing WhatsApp button */}
+      <WhatsAppFloat />
+
+      {/* AI shopping assistant */}
+      <StoreAssistantFloat />
+    </div>
+  );
+}
