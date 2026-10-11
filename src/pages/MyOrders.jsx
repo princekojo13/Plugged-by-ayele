@@ -33,8 +33,8 @@ export default function MyOrders() {
           </h2>
 
           <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-            Use your Order Number from your order confirmation to check your
-            delivery status.
+            Use the Order Number from your confirmation and the email address
+            or phone number entered at checkout to check your delivery status.
           </p>
 
           <Link

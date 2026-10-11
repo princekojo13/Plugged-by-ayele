@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -20,6 +20,16 @@ const STATUS_STEPS = [
   { key: "delivered", label: "Delivered", icon: Truck },
 ];
 
+const STATUS_STEP_INDEX = {
+  pending: 0,
+  confirmed: 1,
+  processing: 1,
+  preparing: 1,
+  shipped: 2,
+  out_for_delivery: 2,
+  delivered: 3,
+};
+
 function money(value) {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
@@ -31,15 +41,17 @@ export default function TrackOrder() {
   const [trackingValue, setTrackingValue] = useState(
     () => params.get("order") || ""
   );
+  const [contactValue, setContactValue] = useState("");
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const runTrack = async (value) => {
+  const runTrack = async (value, contact) => {
     const query = value.trim();
+    const customerContact = contact.trim();
 
-    if (!query) {
-      setError("Please enter your Order Number or tracking token.");
+    if (!query || !customerContact) {
+      setError("Enter your order number and the email address or phone number used at checkout.");
       return;
     }
 
@@ -52,6 +64,7 @@ export default function TrackOrder() {
         await supabase.functions.invoke("track-order", {
           body: {
             order_number: query,
+            contact: customerContact,
           },
         });
 
@@ -59,15 +72,18 @@ export default function TrackOrder() {
         throw functionError;
       }
 
-      if (!data?.order) {
-        throw new Error("Order not found");
+      if (!data?.success || !data?.order) {
+        throw new Error(data?.error || "Order not found");
       }
 
-      setOrder(data.order);
+      setOrder({
+        ...data.order,
+        status: data.order.order_status || data.order.status,
+      });
     } catch (err) {
       console.error("Order tracking error:", err);
       setError(
-        "Order not found. Please check your Order Number and try again."
+        "We couldn't find an order with those details. Check the order number and checkout email or phone."
       );
     } finally {
       setLoading(false);
@@ -76,21 +92,11 @@ export default function TrackOrder() {
 
   const handleTrack = async (event) => {
     event.preventDefault();
-    await runTrack(trackingValue);
+    await runTrack(trackingValue, contactValue);
   };
 
-  useEffect(() => {
-    const initialOrder = params.get("order");
-
-    if (initialOrder) {
-      runTrack(initialOrder);
-    }
-    // Run once for URL-based tracking.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const currentStepIndex = order
-    ? STATUS_STEPS.findIndex((step) => step.key === order.status)
+    ? STATUS_STEP_INDEX[order.status] ?? -1
     : -1;
 
   const isCancelled = order?.status === "cancelled";
@@ -108,25 +114,46 @@ export default function TrackOrder() {
           </h1>
 
           <p className="text-white/60 text-sm">
-            Enter your Order Number to check your delivery status.
+            Enter your Order Number and the email address or phone number used at checkout.
           </p>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <form onSubmit={handleTrack} className="flex gap-3 mb-8">
+        <form onSubmit={handleTrack} className="mb-8 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 
             <input
               type="text"
               value={trackingValue}
-              onChange={(event) => setTrackingValue(event.target.value)}
-              placeholder="Enter your Order Number"
+              onChange={(event) => {
+                setTrackingValue(event.target.value);
+                setOrder(null);
+                setError("");
+              }}
+              placeholder="Order Number"
               autoComplete="off"
+              aria-label="Order number"
+              required
               className="w-full pl-10 pr-4 py-3 bg-white border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-pink"
             />
           </div>
+
+          <input
+            type="text"
+            value={contactValue}
+            onChange={(event) => {
+              setContactValue(event.target.value);
+              setOrder(null);
+              setError("");
+            }}
+            placeholder="Checkout email or phone"
+            autoComplete="off"
+            aria-label="Email address or phone number used at checkout"
+            required
+            className="w-full rounded-md border border-border bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink"
+          />
 
           <button
             type="submit"
@@ -267,10 +294,10 @@ export default function TrackOrder() {
                       </div>
 
                       <p className="text-sm font-semibold text-carbon">
-                        ₵
-                        {money(
-                          Number(item.unit_price || item.price || 0) *
-                            Number(item.quantity || 0)
+                        ₵{money(
+                          item.line_total ??
+                            Number(item.unit_price || item.price || 0) *
+                              Number(item.quantity || 0)
                         )}
                       </p>
                     </div>
@@ -366,7 +393,7 @@ export default function TrackOrder() {
             <Package className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
 
             <p className="text-muted-foreground">
-              Enter your Order Number above to track your shipment.
+              Enter your Order Number and checkout email or phone number to track your shipment.
             </p>
 
             <p className="text-xs text-muted-foreground/60 mt-2">

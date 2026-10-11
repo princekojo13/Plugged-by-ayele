@@ -13,7 +13,7 @@ import {
 import { useCart } from "@/lib/cartContext";
 import { supabase } from "@/lib/supabaseClient";
 import { SITE_CONFIG } from "@/lib/siteConfig";
-import GoogleMapsPinPicker from "@/components/GoogleMapsPinPicker";
+import LeafletPinPicker from "@/components/LeafletPinPicker";
 
 const PAYMENT_METHODS = {
   PAYSTACK: "paystack",
@@ -187,12 +187,16 @@ export default function Checkout() {
       return "Pay on Delivery is currently unavailable.";
     }
 
-    if (
-      paymentMethod ===
-        PAYMENT_METHODS.POD &&
-      form.momo_number.trim().length < 7
-    ) {
-      return "Please enter your Mobile Money number.";
+    if (paymentMethod === PAYMENT_METHODS.POD) {
+      const momoDigits = form.momo_number.replace(/\D/g, "");
+      if (
+        momoDigits.length < 9 ||
+        momoDigits.length > 15 ||
+        form.momo_number.trim().length > 30 ||
+        !/^[+0-9()\s-]+$/.test(form.momo_number.trim())
+      ) {
+        return "Please enter a valid Mobile Money number.";
+      }
     }
 
     if (
@@ -372,13 +376,6 @@ export default function Checkout() {
         data.order.order_number
       );
 
-      if (data.order.tracking_token) {
-        localStorage.setItem(
-          "pba_last_tracking_token",
-          data.order.tracking_token
-        );
-      }
-
       if (form.email.trim()) {
         localStorage.setItem(
           "pba_myemail",
@@ -478,25 +475,14 @@ export default function Checkout() {
           </div>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            {placedOrder.tracking_token ? (
-              <Link
-                to={`/track-order?token=${encodeURIComponent(
-                  placedOrder.tracking_token
-                )}`}
-                className="px-7 py-3 bg-pink text-white font-bold uppercase tracking-wider text-sm hover:bg-carbon transition-colors"
-              >
-                Track My Order
-              </Link>
-            ) : (
-              <Link
-                to={`/track-order?order=${encodeURIComponent(
-                  placedOrder.order_number
-                )}`}
-                className="px-7 py-3 bg-pink text-white font-bold uppercase tracking-wider text-sm hover:bg-carbon transition-colors"
-              >
-                Track My Order
-              </Link>
-            )}
+            <Link
+              to={`/track-order?order=${encodeURIComponent(
+                placedOrder.order_number
+              )}`}
+              className="px-7 py-3 bg-pink text-white font-bold uppercase tracking-wider text-sm hover:bg-carbon transition-colors"
+            >
+              Track My Order
+            </Link>
 
             <Link
               to="/shop"
@@ -688,10 +674,10 @@ export default function Checkout() {
                 required
               >
                 <p className="mb-2 text-sm text-muted-foreground">
-                  Click the Google map to place a pin, or drag the pin to the delivery point. The location is used to calculate delivery distance.
+                  Click or tap the map to place a pin, then drag it to your delivery point. The location is used to calculate delivery distance.
                 </p>
                 <div className="overflow-hidden border border-border">
-                  <GoogleMapsPinPicker
+                  <LeafletPinPicker
                     location={deliveryLocation}
                     onSelect={setDeliveryLocation}
                   />

@@ -67,6 +67,8 @@ function isCustomerError(message: string): boolean {
     "The store is currently closed and cannot accept orders",
     "Cash on delivery is only available within Greater Accra",
     "This address is outside the cash on delivery distance limit",
+    "Please enter a valid Mobile Money number",
+    "Please select a valid Mobile Money network",
   ].some((known) => message.includes(known)) ||
     message.startsWith("Insufficient stock for ");
 }
@@ -120,6 +122,8 @@ Deno.serve(async (req: Request) => {
       : paymentInput === "paystack" || paymentInput === "online"
       ? "paystack"
       : "";
+    const momoNumber = text(body.momo_number, 254);
+    const momoNetwork = text(body.momo_network, 20);
 
     if (fullName.length < 2 || fullName.length > 120) {
       return respond({ success: false, error: "Please enter a valid name." }, 400, headers);
@@ -135,6 +139,20 @@ Deno.serve(async (req: Request) => {
     }
     if (!paymentMethod) {
       return respond({ success: false, error: "Select a valid payment method." }, 400, headers);
+    }
+    if (paymentMethod === "cash_on_delivery") {
+      const momoDigits = momoNumber.replace(/\D/g, "");
+      if (
+        momoDigits.length < 9 ||
+        momoDigits.length > 15 ||
+        momoNumber.length > 30 ||
+        !/^[+0-9()\s-]+$/.test(momoNumber)
+      ) {
+        return respond({ success: false, error: "Please enter a valid Mobile Money number." }, 400, headers);
+      }
+      if (!["MTN", "Telecel", "AirtelTigo"].includes(momoNetwork)) {
+        return respond({ success: false, error: "Please select a valid Mobile Money network." }, 400, headers);
+      }
     }
     if (
       !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
@@ -207,8 +225,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Keep the Edge Function contract aligned with the live create_order RPC.
-    const { data: orderData, error: createError } = await db.rpc("create_order", {
+    // Keep the Edge Function contract aligned with the secure order RPC wrapper.
+    const { data: orderData, error: createError } = await db.rpc("create_order_with_momo", {
       p_customer_name: fullName,
       p_customer_email: email,
       p_customer_phone: phone,
@@ -221,6 +239,8 @@ Deno.serve(async (req: Request) => {
       p_delivery_instructions: orderNote || null,
       p_delivery_region: region,
       p_notes: null,
+      p_momo_number: paymentMethod === "cash_on_delivery" ? momoNumber : null,
+      p_momo_network: paymentMethod === "cash_on_delivery" ? momoNetwork : null,
     });
 
     if (createError) {
@@ -257,7 +277,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: savedOrder, error: readError } = await db
         .from("orders")
-        .select("id,order_number,subtotal,delivery_fee,total,payment_method,payment_status,order_status")
+        .select("id,order_number,subtotal,delivery_fee,total,payment_method,payment_status,order_status,momo_number,momo_network")
         .eq("id", orderId)
         .maybeSingle();
 

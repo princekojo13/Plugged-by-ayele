@@ -63,7 +63,7 @@ function SectionHeader({ title, subtitle, link }) {
   );
 }
 
-function ProductRow({ products, loading }) {
+function ProductRow({ products, loading, emptyMessage }) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
@@ -81,7 +81,7 @@ function ProductRow({ products, loading }) {
     return (
       <div className="border border-dashed border-border py-12 text-center">
         <p className="text-sm text-muted-foreground">
-          New products coming soon — check back shortly.
+          {emptyMessage || "Products will appear here soon."}
         </p>
       </div>
     );
@@ -104,20 +104,25 @@ export default function Home() {
   });
 
   const bestSellers = useProducts({
-    best_seller: true,
+    bestSeller: true,
     limit: 8,
   });
 
   const newArrivals = useProducts({
-    new_arrival: true,
+    newArrival: true,
     limit: 8,
-    sort: "-created_date",
   });
 
-  const specialOffers = useProducts({
-    special_offer: true,
-    limit: 8,
-  });
+  const offerCandidates = useProducts({ limit: 200 });
+  const specialOffers = {
+    loading: offerCandidates.loading,
+    products: offerCandidates.products
+      .filter((product) =>
+        product.special_offer ||
+        Number(product.compare_at_price) > Number(product.price)
+      )
+      .slice(0, 8),
+  };
 
   const { brand_name: brandName } = useStoreSettings();
 
@@ -243,8 +248,9 @@ export default function Home() {
           />
 
           <ProductRow
-            products={featured.data || []}
-            loading={featured.isLoading}
+            products={featured.products || []}
+            loading={featured.loading}
+            emptyMessage="Featured products will appear here soon."
           />
         </div>
       </section>
@@ -340,8 +346,9 @@ export default function Home() {
           />
 
           <ProductRow
-            products={bestSellers.data || []}
-            loading={bestSellers.isLoading}
+            products={bestSellers.products || []}
+            loading={bestSellers.loading}
+            emptyMessage="Best sellers will appear here soon."
           />
         </div>
       </section>
@@ -356,8 +363,9 @@ export default function Home() {
           />
 
           <ProductRow
-            products={specialOffers.data || []}
-            loading={specialOffers.isLoading}
+            products={specialOffers.products || []}
+            loading={specialOffers.loading}
+            emptyMessage="There are no special offers right now."
           />
         </div>
       </section>
@@ -372,8 +380,9 @@ export default function Home() {
           />
 
           <ProductRow
-            products={newArrivals.data || []}
-            loading={newArrivals.isLoading}
+            products={newArrivals.products || []}
+            loading={newArrivals.loading}
+            emptyMessage="New arrivals will appear here soon."
           />
         </div>
       </section>

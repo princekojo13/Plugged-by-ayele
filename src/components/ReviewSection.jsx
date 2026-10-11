@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { cn } from "@/lib/utils";
 
 const MAX_NAME_LENGTH = 100;
-const MAX_REVIEW_LENGTH = 3000;
+const MAX_REVIEW_LENGTH = 2000;
 
 function StarRating({
   value,
@@ -90,7 +90,7 @@ export default function ReviewSection({ productId }) {
           product_id,
           customer_name,
           rating,
-          review,
+          review_text,
           created_at
         `)
         .eq("product_id", productId)
@@ -190,36 +190,20 @@ export default function ReviewSection({ productId }) {
     setError("");
 
     try {
-      /*
-       * Guest reviews are created through the secure
-       * Edge Function. The browser never inserts directly
-       * into the reviews table.
-       */
-      const { data, error: functionError } =
-        await supabase.functions.invoke(
-          "create-review",
-          {
-            body: {
-              product_id: productId,
-              customer_name: customerName,
-              rating: Number(form.rating),
-              review: reviewText,
-            },
-          }
-        );
+      // The database insert policy accepts pending reviews only.
+      const { error: insertError } = await supabase
+        .from("reviews")
+        .insert({
+          product_id: productId,
+          customer_name: customerName,
+          rating: Number(form.rating),
+          review_text: reviewText,
+          approved: false,
+        });
 
-      if (functionError) {
-        throw new Error(
-          functionError.message ||
-            "Failed to submit your review."
-        );
-      }
-
-      if (!data?.success) {
-        throw new Error(
-          data?.error ||
-            "Failed to submit your review."
-        );
+      if (insertError) {
+        console.error("Review insert failed:", insertError);
+        throw new Error("Failed to submit your review. Please try again.");
       }
 
       setSuccess(true);
@@ -311,7 +295,7 @@ export default function ReviewSection({ productId }) {
               </p>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Your review has been submitted.
+                Your review is awaiting approval and will appear after it is reviewed.
               </p>
             </div>
           ) : (
@@ -466,7 +450,7 @@ export default function ReviewSection({ productId }) {
               </div>
 
               <p className="text-sm leading-relaxed text-muted-foreground">
-                {review.review}
+                {review.review_text}
               </p>
             </div>
           ))}

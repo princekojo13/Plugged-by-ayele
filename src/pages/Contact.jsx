@@ -64,6 +64,10 @@ export default function Contact() {
       return "Please enter a valid email address.";
     }
 
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return "Please enter a valid email address.";
+    }
+
     if (phone.length > MAX_PHONE_LENGTH) {
       return "Please enter a valid phone number.";
     }
@@ -78,6 +82,12 @@ export default function Contact() {
 
     if (message.length > MAX_MESSAGE_LENGTH) {
       return "Your message is too long.";
+    }
+
+    const completeMessageLength = message.length +
+      (subject ? `Subject: ${subject}\n\n`.length : 0);
+    if (completeMessageLength > MAX_MESSAGE_LENGTH) {
+      return "Your message and subject must fit within 5,000 characters.";
     }
 
     return "";
@@ -127,31 +137,19 @@ export default function Contact() {
         .filter(Boolean)
         .join("\n\n");
 
-      const { data, error: functionError } =
-        await supabase.functions.invoke(
-          "create-contact",
-          {
-            body: {
-              name,
-              email: email || null,
-              phone: phone || null,
-              message: completeMessage,
-            },
-          }
-        );
+      const { error: insertError } = await supabase
+        .from("contact_messages")
+        .insert({
+          name,
+          email: email || null,
+          phone: phone || null,
+          message: completeMessage,
+          status: "new",
+        });
 
-      if (functionError) {
-        throw new Error(
-          functionError.message ||
-            "We could not send your message."
-        );
-      }
-
-      if (!data?.success) {
-        throw new Error(
-          data?.error ||
-            "We could not send your message."
-        );
+      if (insertError) {
+        console.error("Contact message insert failed:", insertError);
+        throw new Error("We could not send your message. Please try again.");
       }
 
       setSent(true);

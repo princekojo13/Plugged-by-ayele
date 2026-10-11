@@ -32,7 +32,7 @@ const STEPS = [
   {
     icon: PackageCheck,
     title: "Delivered to you",
-    desc: "Track your order any time with your order number.",
+    desc: "Track your order with the order number and email or phone used at checkout.",
   },
 ];
 

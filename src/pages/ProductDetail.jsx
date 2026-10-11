@@ -17,7 +17,7 @@ export default function ProductDetail() {
   const [activeImage, setActiveImage] = useState(0);
   const [added, setAdded] = useState(false);
 
-  const { data: related } = useProducts({ category: product?.category, limit: 5 });
+  const { products: related = [] } = useProducts({ category: product?.category, limit: 5 });
 
   if (isLoading) {
     return (
@@ -43,8 +43,9 @@ export default function ProductDetail() {
     );
   }
 
-  const onSale = product.sale_price && product.sale_price < product.price;
-  const effectivePrice = product.sale_price || product.price;
+  const compareAtPrice = Number(product.compare_at_price);
+  const effectivePrice = Number(product.price);
+  const onSale = Number.isFinite(compareAtPrice) && compareAtPrice > effectivePrice;
   const inStock = product.stock > 0;
   const images = product.images?.length ? product.images : [];
 
@@ -121,7 +122,7 @@ export default function ProductDetail() {
 
             <div className="flex items-baseline gap-3 mb-6">
               <span className="font-heading text-3xl font-bold text-carbon">₵{effectivePrice.toFixed(2)}</span>
-              {onSale && <span className="text-xl text-muted-foreground line-through">₵{product.price.toFixed(2)}</span>}
+              {onSale && <span className="text-xl text-muted-foreground line-through">₵{compareAtPrice.toFixed(2)}</span>}
             </div>
 
             {/* Authenticity block */}

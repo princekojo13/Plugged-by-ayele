@@ -11,10 +11,12 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState(1);
-  const onSale = product.sale_price && product.sale_price < product.price;
+  const compareAtPrice = Number(product.compare_at_price);
+  const currentPrice = Number(product.price);
+  const onSale = Number.isFinite(compareAtPrice) && compareAtPrice > currentPrice;
   const inStock = product.stock > 0;
   const isPreorder = !inStock;
-  const effectivePrice = product.sale_price || product.price;
+  const effectivePrice = currentPrice;
   const maxQty = inStock ? product.stock || 99 : PREORDER_MAX;
 
   const openModal = () => {
@@ -76,7 +78,7 @@ export default function ProductCard({ product }) {
           <div className="flex items-baseline gap-2 mt-auto mb-3">
             <span className="font-heading font-bold text-lg text-carbon">₵{effectivePrice.toFixed(2)}</span>
             {onSale && (
-              <span className="text-sm text-muted-foreground line-through">₵{product.price.toFixed(2)}</span>
+              <span className="text-sm text-muted-foreground line-through">₵{compareAtPrice.toFixed(2)}</span>
             )}
           </div>
         </div>

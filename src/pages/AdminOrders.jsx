@@ -132,6 +132,8 @@ export default function AdminOrders() {
           subtotal,
           total,
           payment_method,
+          momo_number,
+          momo_network,
           payment_status,
           paid_at,
           payment_reference:paystack_reference,

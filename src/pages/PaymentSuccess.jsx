@@ -96,7 +96,7 @@ export default function PaymentSuccess() {
 
       <div className="bg-london/50 border border-border p-6 mb-8 text-left">
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Keep this reference for tracking or when contacting the store. A Paystack redirect alone does not count as payment confirmation.
+          Keep this reference when contacting the store. To track delivery, use your order number together with the email address or phone number entered at checkout. A Paystack redirect alone does not count as payment confirmation.
         </p>
       </div>
 
@@ -116,7 +116,9 @@ export default function PaymentSuccess() {
         </Link>
 
         <Link
-          to={`/track-order?order=${encodeURIComponent(displayRef || "")}`}
+          to={verification.orderNumber
+            ? `/track-order?order=${encodeURIComponent(verification.orderNumber)}`
+            : "/track-order"}
           className="inline-flex items-center justify-center gap-2 px-8 py-3 border border-carbon font-bold uppercase tracking-wider text-sm hover:bg-carbon hover:text-white transition-colors"
         >
           Track My Order
