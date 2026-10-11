@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   BarChart3,
   Clock3,
+  CreditCard,
   MessageSquare,
   Package,
   RefreshCw,
@@ -168,19 +169,18 @@ export default function AdminDashboard() {
     loadDashboard();
   }, [loadDashboard]);
 
-  const totalRevenue = orders
-    .filter(
-      (order) =>
-        order.payment_status === "paid" ||
-        order.payment_method === "pay_on_delivery"
-    )
+  const paidValue = orders
+    .filter((order) => order.payment_status === "paid")
     .reduce(
       (sum, order) => sum + Number(order.total || 0),
       0
     );
 
   const pendingOrders = orders.filter(
-        (order) => order.status === "pending"
+    (order) => order.status === "pending"
+  ).length;
+  const pendingPayments = orders.filter(
+    (order) => order.payment_status !== "paid"
   ).length;
 
   const deliveredOrders = orders.filter(
@@ -260,18 +260,23 @@ export default function AdminDashboard() {
                 label="Total Orders"
                 value={orders.length}
                 note={
-                  pendingOrders > 0
-                    ? `${pendingOrders} need attention`
-                    : "No pending orders"
+                  [
+                    pendingOrders > 0
+                      ? `${pendingOrders} order${pendingOrders === 1 ? "" : "s"} need attention`
+                      : null,
+                    pendingPayments > 0
+                      ? `${pendingPayments} payment${pendingPayments === 1 ? "" : "s"} pending`
+                      : null,
+                  ].filter(Boolean).join(" · ") || "No pending orders or payments"
                 }
                 pink
               />
 
               <StatCard
                 icon={<BarChart3 className="h-5 w-5" />}
-                label="Order Value"
-                value={formatGhs(totalRevenue)}
-                note="Current order value"
+                label="Paid Value"
+                value={formatGhs(paidValue)}
+                note="Orders marked paid only"
               />
 
               <StatCard
@@ -326,10 +331,12 @@ export default function AdminDashboard() {
                   href="/admin/orders"
                   icon={<ShoppingBag className="h-6 w-6" />}
                   title="Orders"
-                  description="View orders and update their status."
+                  description="Review orders, track payments and update delivery status."
                   badge={
-                    pendingOrders > 0
-                      ? `${pendingOrders} pending`
+                    pendingPayments > 0
+                      ? `${pendingPayments} payment${pendingPayments === 1 ? "" : "s"} pending`
+                      : pendingOrders > 0
+                        ? `${pendingOrders} pending`
                       : "All caught up"
                   }
                 />
@@ -373,12 +380,19 @@ export default function AdminDashboard() {
             </section>
 
             {/* Overview */}
-            <section className="mt-9 grid gap-4 md:grid-cols-3">
+            <section className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <OverviewCard
                 icon={<Clock3 className="h-5 w-5" />}
                 label="Pending Orders"
                 value={pendingOrders}
                 description="Orders that need attention"
+              />
+
+              <OverviewCard
+                icon={<CreditCard className="h-5 w-5" />}
+                label="Pending Payments"
+                value={pendingPayments}
+                description="Orders not yet marked paid"
               />
 
               <OverviewCard
