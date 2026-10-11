@@ -251,6 +251,56 @@ export default function AdminOrders() {
     }
   };
 
+  const markCodPaymentReceived = async (order) => {
+    if (
+      updating === order.id ||
+      order.payment_method !== "cash_on_delivery" ||
+      order.payment_status === "paid" ||
+      order.status === "cancelled"
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Confirm you received the full payment for ${order.order_number}. Only mark it paid after collecting the cash or Mobile Money.`
+    );
+    if (!confirmed) return;
+
+    setUpdating(order.id);
+    setError("");
+
+    try {
+      const { data, error: paymentError } = await supabase.rpc(
+        "admin_mark_cod_paid",
+        { p_order_id: order.id }
+      );
+      if (paymentError) throw paymentError;
+      if (!data?.ok) throw new Error("Payment could not be recorded.");
+
+      const paymentUpdate = {
+        payment_status: data.payment_status || "paid",
+        paid_at: data.paid_at || new Date().toISOString(),
+        amount_paid: data.amount_paid ?? order.total,
+      };
+
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, ...paymentUpdate } : item
+        )
+      );
+      setSelectedOrder((current) =>
+        current?.id === order.id
+          ? { ...current, ...paymentUpdate }
+          : current
+      );
+    } catch (err) {
+      console.error("Could not record COD payment:", err);
+      setError(err?.message || "Could not record the received payment.");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     const value = search.trim().toLowerCase();
 
@@ -725,9 +775,9 @@ export default function AdminOrders() {
                             )}
 
                             <p className="mt-3 text-xs text-black/35">
-                              Payment status is controlled by
-                              the verified payment flow, not by
-                              a client-side dropdown.
+                              Paystack is marked paid after automatic
+                              verification. For Pay on Delivery, record payment
+                              only after you collect the cash or Mobile Money.
                             </p>
                           </InfoCard>
                         </div>
@@ -885,18 +935,36 @@ export default function AdminOrders() {
                           </ControlCard>
 
                           <ControlCard label="Payment Status">
-                            <div className="flex min-h-[48px] items-center justify-between rounded-xl border border-black/10 bg-[#fafafa] px-4">
-                              <span
-                                className={`font-semibold capitalize ${paymentClass(
-                                  order.payment_status
-                                )}`}
-                              >
-                                {order.payment_status}
-                              </span>
+                            <div className="flex min-h-[48px] flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#fafafa] px-4 py-3">
+                              <div>
+                                <span
+                                  className={`font-semibold capitalize ${paymentClass(
+                                    order.payment_status
+                                  )}`}
+                                >
+                                  {order.payment_status}
+                                </span>
+                                {order.payment_status === "paid" && order.paid_at && (
+                                  <p className="mt-1 text-xs text-emerald-700">
+                                    Received {formatDate(order.paid_at)}
+                                  </p>
+                                )}
+                              </div>
 
-                              <span className="text-xs text-black/35">
-                                Server controlled
-                              </span>
+                              {order.payment_method === "cash_on_delivery" &&
+                                order.payment_status !== "paid" &&
+                                order.status !== "cancelled" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => markCodPaymentReceived(order)}
+                                    disabled={updating === order.id}
+                                    className="rounded-lg bg-[#ff1f8f] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#e60078] disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {updating === order.id
+                                      ? "Saving…"
+                                      : "Mark payment received"}
+                                  </button>
+                                )}
                             </div>
                           </ControlCard>
                         </div>

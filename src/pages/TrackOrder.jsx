@@ -16,23 +16,33 @@ import { cn } from "@/lib/utils";
 const STATUS_STEPS = [
   { key: "pending", label: "Order Placed", icon: Clock },
   { key: "confirmed", label: "Confirmed", icon: Check },
-  { key: "shipped", label: "Shipped", icon: Package },
+  { key: "processing", label: "Processing", icon: Package },
+  { key: "preparing", label: "Preparing", icon: Package },
+  { key: "out_for_delivery", label: "Out for delivery", icon: Truck },
   { key: "delivered", label: "Delivered", icon: Truck },
 ];
 
 const STATUS_STEP_INDEX = {
   pending: 0,
   confirmed: 1,
-  processing: 1,
-  preparing: 1,
-  shipped: 2,
-  out_for_delivery: 2,
-  delivered: 3,
+  processing: 2,
+  preparing: 3,
+  shipped: 4,
+  out_for_delivery: 4,
+  delivered: 5,
 };
 
 function money(value) {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleString("en-GH", { dateStyle: "medium", timeStyle: "short" });
 }
 
 export default function TrackOrder() {
@@ -160,7 +170,7 @@ export default function TrackOrder() {
             disabled={loading}
             className="px-6 py-3 bg-carbon text-white font-bold uppercase tracking-wider text-sm hover:bg-pink transition-colors disabled:opacity-50"
           >
-            {loading ? "..." : "Track"}
+            {loading ? "Checking…" : order ? "Refresh Status" : "Track"}
           </button>
         </form>
 
@@ -364,13 +374,30 @@ export default function TrackOrder() {
                 {order.payment_method && (
                   <p>
                     <span className="text-muted-foreground">
-                      Payment:
+                      Payment method:
                     </span>{" "}
                     <span className="font-medium text-carbon">
                       {order.payment_method === "paystack"
-                        ? "Paid Online"
+                        ? "Paystack"
                         : "Pay on Delivery"}
                     </span>
+                  </p>
+                )}
+
+                {order.payment_status && (
+                  <p>
+                    <span className="text-muted-foreground">
+                      Payment status:
+                    </span>{" "}
+                    <span className={`font-medium ${order.payment_status === "paid" ? "text-emerald-700" : "text-carbon"}`}>
+                      {order.payment_status.replaceAll("_", " ")}
+                    </span>
+                  </p>
+                )}
+
+                {order.payment_status === "paid" && order.paid_at && formatDate(order.paid_at) && (
+                  <p className="text-emerald-700">
+                    Payment received: {formatDate(order.paid_at)}
                   </p>
                 )}
               </div>
