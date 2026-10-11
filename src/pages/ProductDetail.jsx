@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const { data: product, isLoading } = useProduct(id);
+  const { product, loading: isLoading } = useProduct(id);
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
