@@ -7,7 +7,7 @@ const ALLOWED_ORIGINS = new Set([
   "http://localhost:5174",
   "https://pluggedbyayeley.com",
   "https://www.pluggedbyayeley.com",
-  "https://plugged-by-ayele.onrender.com",
+  "https://plugged-by-ayeley.onrender.com",
 ]);
 
 const MAX_MESSAGES = 8;
